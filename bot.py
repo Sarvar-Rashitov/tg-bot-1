@@ -9,7 +9,11 @@ from telegram.ext import (
 )
 from env import BOT_TOKEN, chanel_username, hr_chat_id
 
-app = Application.builder().token(BOT_TOKEN).build()
+import os 
+from dotenv import load_dotenv
+
+load_dotenv()
+app = Application.builder().token(os.getenv("BOT_TOKEN")).build()
 
 FULL_NAME, PHONE, PHOTO = range(3)
 
@@ -19,7 +23,7 @@ FULL_NAME, PHONE, PHOTO = range(3)
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     print(update.effective_user.id)
-    
+
     context.user_data["username"] = update.effective_user.username
     await update.message.reply_text(f"Xush kelibsiz, {update.effective_user.first_name} \nFISH kiriting: ")
 
