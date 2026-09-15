@@ -1,164 +1,105 @@
 from telegram import Update
 from telegram.ext import (
-    Application, 
-    CommandHandler, 
+    Application,
     ContextTypes,
+    CommandHandler,
     MessageHandler,
-    filters
-) 
-import env
+    filters,
+    ConversationHandler
+)
+from env import BOT_TOKEN, chanel_username, hr_chat_id
+
+app = Application.builder().token(BOT_TOKEN).build()
+
+FULL_NAME, PHONE, PHOTO = range(3)
+
+
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print(update.effective_user)
-    await update.message.reply_text(f"Salom, {update.effective_user.first_name}")
 
-
-async def get_info(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print(update.effective_user)
-
-    first_name = update.effective_user.first_name
-    last_name = update.effective_user.last_name
-    user_id = update.effective_user.id
-    is_bot = update.effective_user.is_bot
-    language_code = update.effective_user.language_code
-    username = update.effective_user.username
-
-    if last_name == None:
-        last_name = ""
-
-    if is_bot == True:
-        is_bot = "Bot ekansiz"
-    else:
-        is_bot = "Bot emassiz" 
-
-    if username == None:
-        username = "Yo'q"
-
-    reply_text =  f"""
-        Assalomu alaykum, {first_name} {last_name}.
-
-        Siz haqizda quyida ma'lumotlar bor menda:
-        1. Telegram ID: {user_id}
-        2. username: @{username}
-        3. Telegramni {language_code} shu tilda ishlatasiz.
-        4. {is_bot}.
-    """ 
+    print(update.effective_user.id)
     
-    await update.message.reply_text(reply_text)
+    context.user_data["username"] = update.effective_user.username
+    await update.message.reply_text(f"Xush kelibsiz, {update.effective_user.first_name} \nFISH kiriting: ")
+
+    return FULL_NAME
 
 
+async def get_full_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-async def get_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print(update.effective_user)
+    context.user_data["full_name"] = update.message.text
+    await update.message.reply_text("FISH gizni qabul qildim, Endi telifon raqamingizni jo'nating: ")
+
+    return PHONE
+
+
+async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    context.user_data["phone"] = update.message.text
+    await update.message.reply_text("Telifon raqamingizni qabul qildim, Endi rasmingizni jo'nating: ")
     
-    help_text = f"""
-Botimizga Xush kelibsiz!
-
-Bu quyidagi comandalar bor:
-1. /start - botni ishga tushurish
-2. /info  - siz haqizda ma'lumot
-3. /about - biz haqimizda
-4. /help  - yordam markazi
-
-Qo'shimcha yordam uchun @Sarvar_Rashitov
-"""
-    await update.message.reply_text(help_text)
-
-async def about(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print(update.effective_user)
-
-    await update.message.reply_text("Biz IPE School o'quvchilarimiz")
-
-
-
-async def get_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print(update.effective_user)
-
-    text = update.message.text      # text = "Salom"
-
-    await update.message.reply_text(f"Xabaringizni oldim. \nQuyidagi xabarni yozdingiz: \n{text}")
-
+    return PHOTO
 
 async def get_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print(update.effective_user)
 
-    photo = update.message.photo[-1]
+    context.user_data["photo"] = update.message.photo[-1].file_id
+    await update.message.reply_text("Rasmingizni qabul qildim. Ma'lumotni jo'natish uchun /cancel bosing")
+    
+    return ConversationHandler.END
 
-    photo_id = photo.file_id
+async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    username = update.effective_user.username
+    await context.bot.send_photo(
+        chat_id=chanel_username,
+        photo=context.user_data["photo"],
+        caption=f"""
+Yangi qatnashuvchi @{context.user_data["username"]}
 
-    file = await context.bot.get_file(photo_id)
-
-    filename = f"photos/{username}.jpg"
-
-    await file.download_to_drive(filename)
-
-    await update.message.reply_photo(photo_id)
-
-
-
-
-async def get_video(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print(update.effective_user)
-
-    video = update.message.video
-
-    video_id = video.file_id
-
-    username = update.effective_user.username
-
-    file = await context.bot.get_file(video_id)
-
-    filename = f"videos/{username}.mp4"
-
-    await file.download_to_drive(filename)
-
-    await update.message.reply_video(video_id)
+FISH: {context.user_data["full_name"]}.
+tell: {context.user_data["phone"]}
+"""
+    )
 
 
+    await context.bot.send_photo(
+            chat_id=hr_chat_id,
+            photo=context.user_data["photo"],
+            caption=f"""
+    Yangi qatnashuvchi @{context.user_data["username"]}
+    
+FISH: {context.user_data["full_name"]}.
+tell: {context.user_data["phone"]}
+"""
+        )
 
 
-async def get_audio(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print(update.effective_user)
+converstation = ConversationHandler(
+    entry_points=[
+        CommandHandler("start", start),
+    ],
+    states={
+        FULL_NAME: [
+            MessageHandler(filters.TEXT, get_full_name)
+        ],
 
-    audio = update.message.audio
+        PHONE: [
+            MessageHandler(filters.TEXT, get_phone)
+        ],
+
+        PHOTO: [
+            MessageHandler(filters.PHOTO, get_photo)
+        ],
+    },
+    fallbacks=[]
+)
 
 
-    audio_id = audio.file_id
-
-    name = audio.file_name
-
-    file = await context.bot.get_file(audio_id)
-
-    filename = f"audios/{name}"
-
-    await file.download_to_drive(filename)
-
-    await update.message.reply_audio(audio_id)
-
-
-
-
-app = Application.builder().token(env.BOT_TOKEN).build()
-
-app.add_handler(CommandHandler("start", start))
-app.add_handler(CommandHandler("info", get_info))
-app.add_handler(CommandHandler("help", get_help))
-app.add_handler(CommandHandler("about", about))
-
-app.add_handler(MessageHandler(filters.TEXT, get_text))
-app.add_handler(MessageHandler(filters.PHOTO, get_photo))
-app.add_handler(MessageHandler(filters.VIDEO, get_video))
-app.add_handler(MessageHandler(filters.AUDIO, get_audio))
+app.add_handler(converstation)
+app.add_handler(CommandHandler("cancel", cancel))
 
 
 
 
 
-
-print("Bot ishga tushdi...")
-app.run_polling()   # run_webhook
-
-
+app.run_polling()
