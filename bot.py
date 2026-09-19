@@ -1,12 +1,18 @@
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
+from telegram import (
+    Update,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+)
+
 from telegram.ext import (
     Application, 
-    CommandHandler, 
-    MessageHandler,
+    ContextTypes, 
+    CommandHandler,
+    MessageHandler, 
     filters,
-    ContextTypes,
-    CallbackQueryHandler
+    CallbackQueryHandler,
 )
+
 from env import BOT_TOKEN
 
 app = Application.builder().token(BOT_TOKEN).build()
@@ -16,39 +22,56 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     keyboard = [
         [
-        InlineKeyboardButton("tugma nomi", callback_data = "salom",)
-        ,
-        InlineKeyboardButton("tugma nomi", callback_data = "help")
+            InlineKeyboardButton("profile", callback_data="profile"),
+            InlineKeyboardButton("settings", callback_data="settings")
         ],
+
         [
-            InlineKeyboardButton("OBUNA", callback_data="obuna")
+            InlineKeyboardButton("Help center", callback_data="help"),
         ],
+
+        [
+            InlineKeyboardButton("About of Company", url="https://ipeschool.uz")
+        ],
+
+        [
+            InlineKeyboardButton("Telegram chanel", url="https://t.me/ipeschool")
+        ]
     ]
 
-    markup = InlineKeyboardMarkup(keyboard)
+    reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await update.message.reply_text(f"""
-Xush kelibsiz, {update.effective_user.first_name}""",
+    first_name = update.effective_user.first_name
+    text = f"""
+Xush kelibsiz, {first_name}.
 
-reply_markup=markup 
+Bu IPE School telegram boti.
 
-)
+Quyidagi tugmalardan birini tanlang:
+"""
+    await update.message.reply_text(text, reply_markup=reply_markup)
 
-async def check_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+async def profile(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print(update.effective_user)
 
     query = update.callback_query
-    print(query)
+
+    await query.answer("Profile loading...")
+
+    text = f"""
+Profile page.
+
+username: @{update.effective_user.username}
+First name: {update.effective_user.first_name}
+"""
+    await query.message.reply_text(text)
 
 
-    
 
-    if query.data == "salom":
-        await query.answer("Salom")
-    elif query.data == "help":
-        await query.answer("Yordam markazi!")
 
 app.add_handler(CommandHandler("start", start))
-app.add_handler(CallbackQueryHandler(check_button))
+app.add_handler(CallbackQueryHandler(profile, pattern="^profile$"))
 
+print("Bot ishga tushdi...")
 app.run_polling()
